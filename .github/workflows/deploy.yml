@@ -1,0 +1,63 @@
+name: Build & Deploy (GitHub Pages)
+
+# main へのマージで本番(ルート)へ、PR でプレビュー(pr-preview/pr-N)へデプロイする。
+# どちらも gh-pages ブランチを共有し、本番デプロイ時もプレビューは保持する。
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+# GITHUB_TOKEN に gh-pages への push と PR コメントの権限を与える
+permissions:
+  contents: write
+  pull-requests: write
+
+# 同一参照のデプロイが重ならないようにする
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # PR クローズ(プレビュー削除)時はビルド不要なのでスキップ
+      - name: Setup Node
+        if: github.event.action != 'closed'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        if: github.event.action != 'closed'
+        run: npm ci
+
+      - name: Type check & build
+        if: github.event.action != 'closed'
+        run: npm run build
+
+      # --- 本番: main への push でルートへ公開 ---
+      # clean-exclude で pr-preview/ を消さずに残す
+      - name: Deploy production (main)
+        if: github.event_name == 'push'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          branch: gh-pages
+          clean: true
+          clean-exclude: |
+            pr-preview/
+
+      # --- プレビュー: PR ごとに pr-preview/pr-<番号>/ へ公開しコメント ---
+      - name: Deploy preview (pull request)
+        if: github.event_name == 'pull_request'
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: dist
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
