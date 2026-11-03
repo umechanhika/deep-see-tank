@@ -26,20 +26,71 @@ jobs:
         uses: actions/checkout@v4
 
       # PR クローズ(プレビュー削除)時はビルド不要なのでスキップ
+
+      # --- three.js 版 (three/) ---
       - name: Setup Node
         if: github.event.action != 'closed'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: three/package-lock.json
 
-      - name: Install dependencies
+      - name: Install dependencies (three.js)
         if: github.event.action != 'closed'
+        working-directory: three
         run: npm ci
 
-      - name: Type check & build
+      - name: Type check & build (three.js)
         if: github.event.action != 'closed'
+        working-directory: three
         run: npm run build
+
+      # --- Flutter Scene 版 (flutter/) ---
+      - name: Setup Flutter
+        if: github.event.action != 'closed'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+
+      - name: Install dependencies (Flutter)
+        if: github.event.action != 'closed'
+        working-directory: flutter
+        run: flutter pub get
+
+      - name: Analyze & test (Flutter)
+        if: github.event.action != 'closed'
+        working-directory: flutter
+        run: |
+          dart analyze --fatal-infos
+          flutter test
+
+      # 画面の文言に、同梱フォントに無い文字が増えていないかを確かめる
+      - name: Check bundled font coverage (Flutter)
+        if: github.event.action != 'closed'
+        working-directory: flutter
+        run: |
+          pip install fonttools
+          python3 tool/subset_fonts.py check
+
+      # Flutter 版はサイトの flutter/ 配下に置く。base href は公開先のパスに合わせる
+      - name: Build (Flutter)
+        if: github.event.action != 'closed'
+        working-directory: flutter
+        env:
+          BASE_HREF: /${{ github.event.repository.name }}/${{ github.event_name == 'pull_request' && format('pr-preview/pr-{0}/', github.event.number) || '' }}flutter/
+        run: flutter build web --release --no-web-resources-cdn --base-href "$BASE_HREF"
+
+      # three.js 版をサイトのルート、Flutter 版を flutter/ に並べる
+      - name: Assemble site
+        if: github.event.action != 'closed'
+        run: |
+          mkdir -p site
+          cp -r three/dist/. site/
+          mkdir -p site/flutter
+          cp -r flutter/build/web/. site/flutter/
 
       # --- 本番: main への push でルートへ公開 ---
       # clean-exclude で pr-preview/ を消さずに残す
@@ -47,7 +98,7 @@ jobs:
         if: github.event_name == 'push'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist
+          folder: site
           branch: gh-pages
           clean: true
           clean-exclude: |
@@ -58,6 +109,6 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: rossjrw/pr-preview-action@v1
         with:
-          source-dir: dist
+          source-dir: site
           preview-branch: gh-pages
           umbrella-dir: pr-preview

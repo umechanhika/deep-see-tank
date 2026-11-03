@@ -1,0 +1,61 @@
+// 発光クラゲの傘。脈動に合わせて裾を絞り、フレネルで縁を光らせる。
+// three.js 版の jellyfish.vert.glsl / jellyfish.frag.glsl の移植。
+material {
+  name: "JellyfishBell",
+  shading_model: unlit,
+  blending: additive,
+  culling: none,
+  depth_write: false,
+  parameters: [
+    { type: float, name: pulse, default: 0 },
+    { type: vec3, name: base_color, default: [1, 1, 1] },
+    { type: vec3, name: rim_color, default: [1, 1, 1] },
+    { type: float, name: opacity, default: 0.85 },
+  ],
+  varyings: [
+    { type: float, name: rim },
+    { type: float, name: dome_v },
+  ],
+}
+
+vertex {
+  void Vertex(inout VertexInputs vertex) {
+    // 傘の収縮: 中心から離れた頂点ほど脈動で下＋内へ絞り込む
+    vec3 p = vertex.position;
+    float radial = length(p.xz);
+    float contract = material_params.pulse * 0.35;
+    p.xz *= 1.0 - contract * smoothstep(0.0, 1.0, radial);
+    p.y -= material_params.pulse * 0.25 * smoothstep(0.0, 1.2, radial);
+
+    vertex.world_position = (vertex.model_transform * vec4(p, 1.0)).xyz;
+    vec3 view_dir = normalize(vertex.camera_position - vertex.world_position);
+    // 傘の内側(裏面)も外側と同じく縁ほど明るくする。three.js 版は裏面で
+    // 常に最大のリムになり、傘全体が白く飛んでいたため絶対値で評価する。
+    rim = 1.0 - abs(dot(normalize(vertex.world_normal), view_dir));
+    dome_v = vertex.uv.y;
+  }
+}
+
+fragment {
+  void Surface(inout MaterialInputs material) {
+    // フレネルでリムを強調（半透明クラゲの縁取り）
+    float fresnel = pow(rim, 2.2);
+
+    // 傘の頂点付近を明るく、裾に向け減衰
+    float dome = smoothstep(0.0, 0.7, dome_v);
+
+    vec3 base = material_params.base_color * (0.35 + dome * 0.5);
+    vec3 rim_light = material_params.rim_color * fresnel * 1.6;
+
+    // 脈動に合わせて内側から発光
+    float glow = (0.4 + material_params.pulse * 0.6) * dome;
+    vec3 color = base + rim_light + material_params.base_color * glow * 0.7;
+
+    // 縁ほど不透明、中央は透ける
+    float alpha = clamp(material_params.opacity * (0.25 + fresnel * 0.9 + dome * 0.2), 0.0, 1.0);
+
+    // three.js 版の出力は色空間変換なし。見た目を揃えるため線形に戻す。
+    // 加算時の重み(不透明度)も表示色の空間で掛かっていたので同様に戻す。
+    material.base_color = vec4(pow(max(color, vec3(0.0)), vec3(2.2)), pow(alpha, 2.2));
+  }
+}
