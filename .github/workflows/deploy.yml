@@ -91,6 +91,14 @@ jobs:
           cp -r three/dist/. site/
           mkdir -p site/flutter
           cp -r flutter/build/web/. site/flutter/
+          # ビルド成果物には Flutter Scene が置いた .gitignore（生成物をすべて除外）が含まれる。
+          # デプロイは git add で公開ファイルを登録するため、残すとシェーダーが公開されない
+          find site/flutter -name .gitignore -delete
+          # シェーダーが 1 つも無ければ、公開しても起動しないので止める
+          if ! find site/flutter -name '*.shaderbundle' | grep -q .; then
+            echo "::error::Flutter 版のシェーダー(.shaderbundle)がビルド結果にありません"
+            exit 1
+          fi
 
       # --- 本番: main への push でルートへ公開 ---
       # clean-exclude で pr-preview/ を消さずに残す
