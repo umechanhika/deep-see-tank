@@ -1,0 +1,42 @@
+// 発光クラゲの触手。根元から先端へ向かうほど大きく揺らす。
+// 頂点ごとの「根元からの位置(0〜1)」と「揺れの位相」はカスタム属性で受け取る。
+material {
+  name: "JellyfishTentacle",
+  shading_model: unlit,
+  blending: additive,
+  culling: none,
+  depth_write: false,
+  parameters: [
+    { type: float, name: time, default: 0 },
+    { type: vec3, name: base_color, default: [1, 1, 1] },
+  ],
+  attributes: [
+    { type: float, name: tentacle_t },
+    { type: float, name: tentacle_phase },
+  ],
+  varyings: [
+    { type: float, name: v_t },
+  ],
+}
+
+vertex {
+  void Vertex(inout VertexInputs vertex) {
+    v_t = tentacle_t;
+    vec3 p = vertex.position;
+    float t = material_params.time;
+    float amp = tentacle_t * 0.4;
+    p.x += sin(t * 1.4 + tentacle_phase + tentacle_t * 3.0) * amp;
+    p.z += cos(t * 1.05 + tentacle_phase * 1.3 + tentacle_t * 4.0) * amp;
+    vertex.world_position = (vertex.model_transform * vec4(p, 1.0)).xyz;
+  }
+}
+
+fragment {
+  void Surface(inout MaterialInputs material) {
+    float a = (1.0 - v_t) * 0.45 + 0.05;
+    vec3 color = material_params.base_color * (0.6 + (1.0 - v_t) * 0.5);
+    // three.js 版の出力は色空間変換なし。見た目を揃えるため線形に戻す。
+    // 加算時の重み(不透明度)も表示色の空間で掛かっていたので同様に戻す。
+    material.base_color = vec4(pow(max(color, vec3(0.0)), vec3(2.2)), pow(a, 2.2));
+  }
+}

@@ -1,0 +1,51 @@
+// 水槽内部を満たす水のボリューム。
+// 箱の内側(裏面)だけを描き、縦グラデーション＋ゴッドレイ風の光の筋で
+// 水中にいる雰囲気を作る。three.js 版の water.frag.glsl の移植。
+//
+// three.js 版は半透明(不透明度 0.6〜0.92)で背景色に重ねていた。
+// 水の箱は常に他の物体より奥にあるため、ここでは背景色との合成を
+// シェーダー内で済ませて不透明で描き、半透明の描画順の問題を避ける。
+material {
+  name: "Water",
+  shading_model: unlit,
+  blending: opaque,
+  culling: front,
+  depth_write: true,
+  parameters: [
+    { type: float, name: time, default: 0 },
+    { type: vec3, name: deep_color, default: [0.0, 0.0, 0.0] },
+    { type: vec3, name: light_color, default: [0.0, 0.0, 0.0] },
+    { type: vec3, name: background_color, default: [0.0, 0.0, 0.0] },
+    { type: float, name: tank_height, default: 16 },
+  ],
+}
+
+fragment {
+  void Surface(inout MaterialInputs material) {
+    vec3 world = GetWorldPosition();
+    float t = material_params.time;
+
+    // 上(明るい)→下(暗い)への縦グラデーション
+    float h = clamp(world.y / material_params.tank_height + 0.5, 0.0, 1.0);
+    float gradient = pow(h, 1.6);
+    vec3 color = mix(material_params.deep_color, material_params.light_color, gradient);
+
+    // ゴッドレイ風の光の筋: x方向に周期的な明暗、ゆっくり流れる
+    float ray = sin(world.x * 0.45 + t * 0.15) * sin(world.x * 0.17 - t * 0.08);
+    ray = smoothstep(0.2, 1.0, ray) * gradient * 0.35;
+    color += material_params.light_color * ray;
+
+    // 水の揺らぎ(微弱な明滅)。three.js 版は箱の面ごとの UV を使っていたため、
+    // 面の向きに依らない世界座標の高さで代用する。
+    float shimmer = sin((world.y / material_params.tank_height + 0.5) * 30.0 + t * 0.6) * 0.015;
+    color += shimmer;
+
+    // 上方ほど不透明感を弱め、奥行きを感じさせる（背景色との合成）
+    float alpha = mix(0.92, 0.6, gradient);
+    color = mix(material_params.background_color, color, alpha);
+
+    // three.js 版はこの値を色空間変換せずに出力していた（ShaderMaterial の既定）。
+    // 見た目を揃えるため、出力値を線形値とみなして sRGB→線形に戻してから渡す。
+    material.base_color = vec4(pow(max(color, vec3(0.0)), vec3(2.2)), 1.0);
+  }
+}
