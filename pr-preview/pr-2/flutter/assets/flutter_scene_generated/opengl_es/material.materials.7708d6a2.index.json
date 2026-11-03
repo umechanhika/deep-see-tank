@@ -1,0 +1,21 @@
+{
+  "schema": 2,
+  "package": "deep_see_tank",
+  "bundleName": "materials",
+  "shaderBundleFileName": "material.materials.7708d6a2.shaderbundle",
+  "sidecarFileName": "material.materials.7708d6a2.fmat.json",
+  "materials": {
+    "JellyfishBell": {
+      "entryName": "JellyfishBell",
+      "source": "assets/materials/jellyfish_bell.fmat"
+    },
+    "JellyfishTentacle": {
+      "entryName": "JellyfishTentacle",
+      "source": "assets/materials/jellyfish_tentacle.fmat"
+    },
+    "Water": {
+      "entryName": "Water",
+      "source": "assets/materials/water.fmat"
+    }
+  }
+}

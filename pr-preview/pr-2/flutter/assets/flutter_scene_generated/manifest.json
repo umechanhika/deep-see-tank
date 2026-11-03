@@ -1,0 +1,48 @@
+{
+  "schema": 3,
+  "package": "deep_see_tank",
+  "entries": [
+    {
+      "family": "material",
+      "id": "materials",
+      "file": "opengl_es/material.materials.7708d6a2.index.json",
+      "stamp": "3d1e50eaf70eafb0",
+      "target": "openglEs"
+    },
+    {
+      "family": "material",
+      "id": "materials",
+      "file": "opengl_es_vulkan/material.materials.fbc64f4c.index.json",
+      "stamp": "d1ebbfbd3e3bb097",
+      "target": "openglEs,vulkan"
+    },
+    {
+      "family": "material",
+      "id": "materials#shaderbundle",
+      "file": "opengl_es/material.materials.7708d6a2.shaderbundle",
+      "stamp": "3d1e50eaf70eafb0",
+      "target": "openglEs"
+    },
+    {
+      "family": "material",
+      "id": "materials#shaderbundle",
+      "file": "opengl_es_vulkan/material.materials.fbc64f4c.shaderbundle",
+      "stamp": "d1ebbfbd3e3bb097",
+      "target": "openglEs,vulkan"
+    },
+    {
+      "family": "material",
+      "id": "materials#sidecar",
+      "file": "opengl_es/material.materials.7708d6a2.fmat.json",
+      "stamp": "3d1e50eaf70eafb0",
+      "target": "openglEs"
+    },
+    {
+      "family": "material",
+      "id": "materials#sidecar",
+      "file": "opengl_es_vulkan/material.materials.fbc64f4c.fmat.json",
+      "stamp": "d1ebbfbd3e3bb097",
+      "target": "openglEs,vulkan"
+    }
+  ]
+}
